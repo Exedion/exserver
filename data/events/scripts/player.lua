@@ -182,5 +182,6 @@ function Player:onGainSkillTries(skill, tries)
 end
 
 function Player:onSave(GUID)
+    player:saveSpecialStorage()
 	return true
 end
