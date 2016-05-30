@@ -1130,51 +1130,53 @@ void Monster::pushCreatures(Tile* tile)
 	}
 }
 
-bool Monster::getNextStep(Direction& direction, uint32_t& flags)
+bool Monster::getNextStep(Direction& dir, uint32_t& flags)
 {
-	if (isIdle || getHealth() <= 0) {
-		//we dont have anyone watching might aswell stop walking
-		eventWalk = 0;
-		return false;
-	}
+   if (getHealth() <= 0) {
+     //we dont have anyone watching might aswell stop walking
+     eventWalk = 0;
+     return false;
+   }
+  
+   bool result = false;
+   if (hasFollowPath)
+     return Creature::getNextStep(dir, flags);
+   else if ((!followCreature || !hasFollowPath) && !isSummon()) {
+     if ((followCreature || getTimeSinceLastMove() > 1000) && !hasFollowPath && !isIdle) {
+       //choose a random direction
+       result = getRandomStep(getPosition(), dir);
+     }
+   } else if (isSummon() || followCreature) {
+     result = Creature::getNextStep(dir, flags);
+     if (result) {
+       flags |= FLAG_PATHFINDING;
+     } else {
+       //target dancing
+       if (attackedCreature && attackedCreature == followCreature) {
+         if (isFleeing()) {
+           result = getDanceStep(getPosition(), dir, false, false);
+         } else if (mType->staticAttackChance < static_cast<uint32_t>(uniform_random(1, 100))) {
+           result = getDanceStep(getPosition(), dir);
+         }
+       }
+     }
+   }
 
-	bool result = false;
-	if (((!followCreature || !hasFollowPath) && (isSummon() && !isMasterInRange))) {
-		if (followCreature || getTimeSinceLastMove() > 1000) {
-			//choose a random direction
-			result = getRandomStep(getPosition(), direction);
-		}
-	} else if ((isSummon() && isMasterInRange) || followCreature) {
-		result = Creature::getNextStep(direction, flags);
-		if (result) {
-			flags |= FLAG_PATHFINDING;
-		} else {
-			//target dancing
-			if (attackedCreature && attackedCreature == followCreature) {
-				if (isFleeing()) {
-					result = getDanceStep(getPosition(), direction, false, false);
-				} else if (mType->staticAttackChance < static_cast<uint32_t>(uniform_random(1, 100))) {
-					result = getDanceStep(getPosition(), direction);
-				}
-			}
-		}
-	}
+   if (result && (canPushItems() || canPushCreatures())) {
+     const Position& pos = Spells::getCasterPosition(this, dir);
+     Tile* tile = g_game.map.getTile(pos);
+     if (tile) {
+       if (canPushItems()) {
+         Monster::pushItems(tile);
+       }
 
-	if (result && (canPushItems() || canPushCreatures())) {
-		const Position& pos = Spells::getCasterPosition(this, direction);
-		Tile* tile = g_game.map.getTile(pos);
-		if (tile) {
-			if (canPushItems()) {
-				pushItems(tile);
-			}
+       if (canPushCreatures()) {
+         Monster::pushCreatures(tile);
+       }
+     }
+   }
 
-			if (canPushCreatures()) {
-				pushCreatures(tile);
-			}
-		}
-	}
-
-	return result;
+   return result;
 }
 
 bool Monster::getRandomStep(const Position& creaturePos, Direction& direction) const

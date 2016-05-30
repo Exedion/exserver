@@ -977,33 +977,40 @@ void Creature::goToFollowCreature()
 
 bool Creature::setFollowCreature(Creature* creature)
 {
-	if (creature) {
-		if (followCreature == creature) {
-			return true;
-		}
+    if (creature) {
+        if (followCreature == creature) {
+            return true;
+        }
 
-		const Position& creaturePos = creature->getPosition();
-		if (creaturePos.z != getPosition().z || !canSee(creaturePos)) {
-			followCreature = nullptr;
-			return false;
-		}
+        const Position& creaturePos = creature->getPosition();
+        FindPathParams fpp;
+        fpp.minTargetDist = 0;
+        fpp.maxTargetDist = 1;
+        fpp.fullPathSearch = true;
+        fpp.clearSight = true;
+        fpp.maxSearchDist = 150;
+        std::forward_list<Direction> dirList;
+        if (creaturePos.z != getPosition().z || !canSee(creaturePos) || !getPathTo(creaturePos, dirList, fpp)) {
+            followCreature = nullptr;
+            return false;
+        }
 
-		if (!listWalkDir.empty()) {
-			listWalkDir.clear();
-			onWalkAborted();
-		}
+        if (!listWalkDir.empty()) {
+            listWalkDir.clear();
+            onWalkAborted();
+        }
 
-		hasFollowPath = false;
-		forceUpdateFollowPath = false;
-		followCreature = creature;
-		isUpdatingPath = true;
-	} else {
-		isUpdatingPath = false;
-		followCreature = nullptr;
-	}
+        hasFollowPath = false;
+        forceUpdateFollowPath = false;
+        followCreature = creature;
+        isUpdatingPath = true;
+    } else {
+        isUpdatingPath = false;
+        followCreature = nullptr;
+    }
 
-	onFollowCreature(creature);
-	return true;
+    onFollowCreature(creature);
+    return true;
 }
 
 double Creature::getDamageRatio(Creature* attacker) const
