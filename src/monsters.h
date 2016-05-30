@@ -133,6 +133,7 @@ class MonsterType
 		int32_t creatureMoveEvent;
 		int32_t creatureSayEvent;
 		int32_t thinkEvent;
+		int32_t targetEvent;
 		int32_t targetDistance;
 		int32_t runAwayHealth;
 		int32_t health;

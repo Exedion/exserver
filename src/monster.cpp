@@ -630,22 +630,54 @@ bool Monster::isTarget(const Creature* creature) const
 
 bool Monster::selectTarget(Creature* creature)
 {
-	if (!isTarget(creature)) {
-		return false;
-	}
+    if (!isTarget(creature)) {
+        return false;
+    }
 
-	auto it = std::find(targetList.begin(), targetList.end(), creature);
-	if (it == targetList.end()) {
-		//Target not found in our target list.
-		return false;
-	}
+    auto it = std::find(targetList.begin(), targetList.end(), creature);
+    if (it == targetList.end()) {
+        //Target not found in our target list.
+        return false;
+    }
 
-	if (isHostile() || isSummon()) {
-		if (setAttackedCreature(creature) && !isSummon()) {
-			g_dispatcher.addTask(createTask(std::bind(&Game::checkCreatureAttack, &g_game, getID())));
-		}
-	}
-	return setFollowCreature(creature);
+    if (isHostile() || isSummon()) {
+        if (executeOnSelectTarget(creature) == 1){
+            if (setAttackedCreature(creature) && !isSummon()) {
+                    g_dispatcher.addTask(createTask(std::bind(&Game::checkCreatureAttack, &g_game, getID())));
+            }
+        }
+        else
+            return false;
+    }
+    return setFollowCreature(creature);
+}
+
+bool Monster::executeOnSelectTarget(Creature* creature){
+
+    // onSelectTarget(self, target)
+    if (mType->targetEvent != -1) {
+        LuaScriptInterface* scriptInterface = mType->scriptInterface;
+
+        if (!scriptInterface->reserveScriptEnv()) {
+            std::cout << "[Error - Monster::onSelectTarget] Call stack overflow" << std::endl;
+            return true;
+        }
+
+        ScriptEnvironment* env = scriptInterface->getScriptEnv();
+        env->setScriptId(mType->targetEvent, scriptInterface);
+
+        lua_State* L = scriptInterface->getLuaState();
+        scriptInterface->pushFunction(mType->targetEvent);
+
+        LuaScriptInterface::pushUserdata<Monster>(L, this);
+        LuaScriptInterface::setMetatable(L, -1, "Monster");
+
+        LuaScriptInterface::pushUserdata(L, creature);
+        LuaScriptInterface::setCreatureMetatable(L, -1, creature);
+
+        return (scriptInterface->callFunction(2));
+    }
+    return true;
 }
 
 void Monster::setIdle(bool idle)

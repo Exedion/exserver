@@ -105,6 +105,7 @@ void MonsterType::reset()
 	creatureMoveEvent = -1;
 	creatureSayEvent = -1;
 	thinkEvent = -1;
+	targetEvent = -1;
 
 	scripts.clear();
 }
@@ -268,6 +269,7 @@ bool Monsters::loadFromXml(bool reloading /*= false*/)
 				mType->creatureMoveEvent = scriptInterface->getEvent("onCreatureMove");
 				mType->creatureSayEvent = scriptInterface->getEvent("onCreatureSay");
 				mType->thinkEvent = scriptInterface->getEvent("onThink");
+				mType->targetEvent = scriptInterface->getEvent("onSelectTarget");
 			} else {
 				std::cout << "[Warning - Monsters::loadMonster] Can not load script: " << scriptEntry.second << std::endl;
 				std::cout << scriptInterface->getLastLuaError() << std::endl;
